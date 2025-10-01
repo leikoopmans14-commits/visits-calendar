@@ -24,16 +24,19 @@
 <script>
 /** ---- CONFIG ---- **/
 const PORTAL_URL = "https://werkwijzer.maps.arcgis.com";   // your org portal
-const CLIENT_ID  = "Gytc1FzmnOxHvGIk";                      // your OAuth app id
-const LAYER_URL  = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0"; // <-- check this
+const CLIENT_ID  = "Gytc1FzmnOxHvGIk";                      // your OAuth client id
+const LAYER_URL  = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0"; // sublayer
 
 require([
+  "esri/config",
   "esri/identity/OAuthInfo",
   "esri/identity/IdentityManager",
   "esri/layers/FeatureLayer"
-], function(OAuthInfo, esriId, FeatureLayer) {
+], function(esriConfig, OAuthInfo, esriId, FeatureLayer) {
 
-  // Register OAuth
+  // Make sure the JS API also targets your org portal (prevents arcgis.com fallback)
+  esriConfig.portalUrl = PORTAL_URL;
+
   const info = new OAuthInfo({
     appId: CLIENT_ID,
     portalUrl: PORTAL_URL,
@@ -41,7 +44,7 @@ require([
   });
   esriId.registerOAuthInfos([info]);
 
-  // If already signed in, start. Otherwise prompt, then start.
+  // Try existing session, otherwise prompt on your org portal
   esriId.checkSignInStatus(PORTAL_URL + "/sharing")
     .then(start)
     .catch(() => esriId.getCredential(PORTAL_URL + "/sharing").then(start));
