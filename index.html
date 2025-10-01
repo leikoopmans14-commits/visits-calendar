@@ -14,7 +14,7 @@
   <script src="https://js.arcgis.com/4.30/"></script>
 
   <style>
-    body { margin:0; font-family: system-ui,Segoe UI,Roboto,sans-serif; }
+    body { margin:0; font-family: system-ui, Segoe UI, Roboto, sans-serif; }
     #calendar { max-width: 1200px; margin: 12px auto; padding: 8px; }
   </style>
 </head>
@@ -22,54 +22,72 @@
   <div id="calendar"></div>
 
 <script>
-const LAYER_URL = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0";
+/** ---- CONFIG ---- **/
+const PORTAL_URL = "https://www.arcgis.com";   // or your enterprise portal
+const CLIENT_ID  = "Gytc1FzmnOxHvGlk";         // your Client ID
+const LAYER_URL  = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0";
 
-require(["esri/layers/FeatureLayer"], function(FeatureLayer) {
-  const layer = new FeatureLayer({ url: LAYER_URL, outFields: ["*"] });
+require([
+  "esri/identity/OAuthInfo",
+  "esri/identity/IdentityManager",
+  "esri/layers/FeatureLayer"
+], function(OAuthInfo, esriId, FeatureLayer) {
 
-  async function loadEvents() {
-    const q = layer.createQuery();
-    q.where = "1=1";
-    q.outFields = ["*"];
-    q.returnGeometry = false;
-    const res = await layer.queryFeatures(q);
+  // Register OAuth app
+  const info = new OAuthInfo({
+    appId: CLIENT_ID,
+    portalUrl: PORTAL_URL,
+    popup: true
+  });
+  esriId.registerOAuthInfos([info]);
 
-    const events = [];
-    res.features.forEach(f => {
-      const attrs = f.attributes;
-      // loop through each month/visit slot
-      for (let m=1; m<=12; m++) {
-        const mm = String(m).padStart(2,"0");
-        for (let v=1; v<=4; v++) {
-          const field = `M${mm}_V${v}_Target`;
-          const dateVal = attrs[field];
-          if (dateVal) {
-            events.push({
-              title: `${attrs.Worker || "Visit"}`,
-              start: dateVal,
-              allDay: true,
-              extendedProps: { oid: attrs.OBJECTID, field, attrs }
-            });
+  // Check for existing sign-in, otherwise prompt
+  esriId.checkSignInStatus(PORTAL_URL + "/sharing")
+    .then(start)
+    .catch(() => esriId.getCredential(PORTAL_URL + "/sharing").then(start));
+
+  async function start() {
+    const layer = new FeatureLayer({ url: LAYER_URL, outFields: ["*"] });
+    await layer.load();
+
+    async function loadEvents() {
+      const q = layer.createQuery();
+      q.where = "1=1";
+      q.outFields = ["*"];
+      q.returnGeometry = false;
+      const res = await layer.queryFeatures(q);
+
+      const events = [];
+      res.features.forEach(f => {
+        const a = f.attributes;
+        for (let m = 1; m <= 12; m++) {
+          const mm = String(m).padStart(2, "0");
+          for (let v = 1; v <= 4; v++) {
+            const field = `M${mm}_V${v}_Target`;
+            const dt = a[field];
+            if (dt) {
+              events.push({
+                title: `${a.Worker || "Visit"}`,
+                start: dt,
+                allDay: true,
+                extendedProps: { oid: a.OBJECTID, field }
+              });
+            }
           }
         }
-      }
-    });
-    return events;
-  }
+      });
+      return events;
+    }
 
-  async function initCalendar() {
     const calendarEl = document.getElementById("calendar");
     const events = await loadEvents();
-
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: "dayGridMonth",
-      editable: false, // set true in Step 3 for drag/drop editing
-      events: events
+      editable: false,
+      events
     });
     calendar.render();
   }
-
-  initCalendar();
 });
 </script>
 </body>
