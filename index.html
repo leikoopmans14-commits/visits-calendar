@@ -23,9 +23,9 @@
 
 <script>
 /** ---- CONFIG ---- **/
-const PORTAL_URL = "https://www.arcgis.com";   // or your enterprise portal
-const CLIENT_ID  = "Gytc1FzmnOxHvGlk";         // your Client ID
-const LAYER_URL  = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0";
+const PORTAL_URL = "https://werkwijzer.maps.arcgis.com";   // your org portal
+const CLIENT_ID  = "Gytc1FzmnOxHvGlk";                      // your OAuth app id
+const LAYER_URL  = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0"; // <-- check this
 
 require([
   "esri/identity/OAuthInfo",
@@ -33,7 +33,7 @@ require([
   "esri/layers/FeatureLayer"
 ], function(OAuthInfo, esriId, FeatureLayer) {
 
-  // Register OAuth app
+  // Register OAuth
   const info = new OAuthInfo({
     appId: CLIENT_ID,
     portalUrl: PORTAL_URL,
@@ -41,7 +41,7 @@ require([
   });
   esriId.registerOAuthInfos([info]);
 
-  // Check for existing sign-in, otherwise prompt
+  // If already signed in, start. Otherwise prompt, then start.
   esriId.checkSignInStatus(PORTAL_URL + "/sharing")
     .then(start)
     .catch(() => esriId.getCredential(PORTAL_URL + "/sharing").then(start));
@@ -92,4 +92,3 @@ require([
 </script>
 </body>
 </html>
-
