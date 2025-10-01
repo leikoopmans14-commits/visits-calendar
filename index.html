@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Visits Calendar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <!-- ArcGIS JS API -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css"/>
+  <script src="https://js.arcgis.com/4.30/"></script>
+
+  <style>
+    body { margin:0; font-family: system-ui,Segoe UI,Roboto,sans-serif; }
+    #calendar { max-width: 1200px; margin: 12px auto; padding: 8px; }
+  </style>
+</head>
+<body>
+  <div id="calendar"></div>
+
+<script>
+const LAYER_URL = "https://services8.arcgis.com/tYFVZdYwknlgqZDz/arcgis/rest/services/Schedule_TEST_toevoegen_locaties/FeatureServer/0";
+
+require(["esri/layers/FeatureLayer"], function(FeatureLayer) {
+  const layer = new FeatureLayer({ url: LAYER_URL, outFields: ["*"] });
+
+  async function loadEvents() {
+    const q = layer.createQuery();
+    q.where = "1=1";
+    q.outFields = ["*"];
+    q.returnGeometry = false;
+    const res = await layer.queryFeatures(q);
+
+    const events = [];
+    res.features.forEach(f => {
+      const attrs = f.attributes;
+      // loop through each month/visit slot
+      for (let m=1; m<=12; m++) {
+        const mm = String(m).padStart(2,"0");
+        for (let v=1; v<=4; v++) {
+          const field = `M${mm}_V${v}_Target`;
+          const dateVal = attrs[field];
+          if (dateVal) {
+            events.push({
+              title: `${attrs.Worker || "Visit"}`,
+              start: dateVal,
+              allDay: true,
+              extendedProps: { oid: attrs.OBJECTID, field, attrs }
+            });
+          }
+        }
+      }
+    });
+    return events;
+  }
+
+  async function initCalendar() {
+    const calendarEl = document.getElementById("calendar");
+    const events = await loadEvents();
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      editable: false, // set true in Step 3 for drag/drop editing
+      events: events
+    });
+    calendar.render();
+  }
+
+  initCalendar();
+});
+</script>
+</body>
+</html>
